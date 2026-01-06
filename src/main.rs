@@ -9,7 +9,7 @@ use console::style;
 use prompt::{prompt, prompt_input_data};
 
 fn main() -> anyhow::Result<()> {
-    println!("{}", style("⚡ Mini-chain").bold().green());
+    println!("{}", style("⚡ Mini-chain - A tiny, playful blockchain in your terminal").bold().green());
 
     let miner_addr: String = prompt_input_data("Enter miner address:");
     let difficulty: u32 = prompt_input_data("Enter initial difficulty:");
