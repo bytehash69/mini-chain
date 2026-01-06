@@ -1,38 +1,39 @@
-
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Serialize;
 use sha2::{Digest, Sha256};
 use std::fmt::Write;
 use time::UtcDateTime;
 
+use crate::ui::{mining_spinner, print_block};
+
 #[derive(Debug, Clone, Serialize)]
-struct Transaction {
-    sender: String,
-    reciever: String,
-    amount: f32,
+pub struct Transaction {
+    pub sender: String,
+    pub reciever: String,
+    pub amount: f32,
 }
 
 #[derive(Serialize, Debug)]
 pub struct Blockheader {
-    timestamp: i64,
-    nonce: u32,
-    pre_hash: String,
-    merkle: String,
-    difficulty: u32,
+    pub timestamp: i64,
+    pub nonce: u32,
+    pub pre_hash: String,
+    pub merkle: String,
+    pub difficulty: u32,
 }
 
 #[derive(Serialize, Debug)]
-struct Block {
-    header: Blockheader,
-    count: u32,
-    transactions: Vec<Transaction>,
+pub struct Block {
+    pub header: Blockheader,
+    pub count: u32,
+    pub transactions: Vec<Transaction>,
 }
 
 pub struct Chain {
-    chain: Vec<Block>,
-    curr_trans: Vec<Transaction>,
-    difficulty: u32,
-    miner_addr: String,
-    reward: f32,
+    pub chain: Vec<Block>,
+    pub curr_trans: Vec<Transaction>,
+    pub difficulty: u32,
+    pub miner_addr: String,
+    pub reward: f32,
 }
 
 impl Chain {
@@ -54,13 +55,13 @@ impl Chain {
         s
     }
 
-    pub fn new(miner_addr: String, difficulty: u32) -> Chain {
+    pub fn new(miner_addr: String, difficulty: u32, reward: u32) -> Chain {
         let mut chain = Chain {
             chain: Vec::new(),
             curr_trans: Vec::new(),
             difficulty,
             miner_addr,
-            reward: 10.0,
+            reward: reward as f32,
         };
 
         chain.generate_new_block();
@@ -121,7 +122,8 @@ impl Chain {
         block.header.merkle = Chain::get_merkle(block.transactions.clone());
         Chain::proof_of_work(&mut block.header);
 
-        println!("{:#?}", &block);
+        let hash = Chain::hash(&block.header);
+        print_block(&block, &hash);
         self.chain.push(block);
         true
     }
@@ -150,23 +152,20 @@ impl Chain {
     }
 
     pub fn proof_of_work(header: &mut Blockheader) {
+        let pb = mining_spinner();
+
         loop {
             let hash = Chain::hash(header);
-            let slice = &hash[..header.difficulty as usize];
 
-            match slice.parse::<u32>() {
-                Ok(v) => {
-                    if v != 0 {
-                        header.nonce += 1;
-                    } else {
-                        println!("Block hash: {}", hash);
-                        break;
-                    }
-                }
-                Err(_) => {
-                    header.nonce += 1;
-                    continue;
-                }
+            if hash.starts_with(&"0".repeat(header.difficulty as usize)) {
+                break;
+            }
+
+            header.nonce += 1;
+
+            // update spinner text occasionally
+            if header.nonce % 5_000 == 0 {
+                pb.set_message(format!("Mining... nonce {}", header.nonce));
             }
         }
     }
